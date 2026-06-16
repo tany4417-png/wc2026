@@ -462,7 +462,7 @@ function renderSchedule(filter){
     }
     const timeCol=past
       ? `<b>${m.time}</b><span class="past-tag">終了</span>`
-      : `<b>${m.time}</b><span>第${m.n}試合</span>`;
+      : (isNext?`<b>${m.time}</b><span style="color:var(--accent);font-weight:800">▶ 次</span>`:`<b>${m.time}</b><span>JST</span>`);
     html+=`<div class="${cls}">
       <div class="m-time">${timeCol}</div>
       <div class="m-body">
