@@ -149,6 +149,20 @@
   .standings li.q3{border-left-color:var(--accent2)}  /* 3位（条件付き突破） */
   .standings li.q1 .rank{color:var(--live)}
   .standings li.jp .tname{color:var(--jp)}
+  /* 強さランキング */
+  .ranking{list-style:none;margin:0;padding:0}
+  .rk-row{display:flex;align-items:center;gap:9px;background:var(--card);border:1px solid var(--line);
+    border-radius:10px;box-shadow:var(--shadow);padding:9px 12px;margin-top:7px;border-left:4px solid transparent}
+  .rk-pos{flex:0 0 30px;text-align:center;font-weight:800;font-size:16px;color:var(--muted)}
+  .rk-row .fl{font-size:20px;flex:0 0 auto}
+  .rk-name{flex:1;min-width:0;font-weight:700;font-size:14.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .rk-grp{font-size:11px;color:var(--muted);background:#eaf2ed;padding:2px 7px;border-radius:999px;flex:0 0 auto}
+  .rk-fifa{font-size:11.5px;color:var(--muted);flex:0 0 auto;min-width:64px;text-align:right}
+  .rk-row.top8{border-left-color:var(--live)}
+  .rk-row.top3{border-left-color:var(--gold);background:linear-gradient(180deg,#fffdf3,#fff)}
+  .rk-row.top3 .rk-pos{color:var(--gold)}
+  .rk-row.jp{border-left-color:var(--jp)}
+  .rk-row.jp .rk-name{color:var(--jp)}
 
   /* トーナメント */
   .roundblock{margin-bottom:22px}
@@ -222,6 +236,7 @@
   <button data-tab="schedule" class="active">📅 日程</button>
   <button data-tab="groups">🗂 グループ</button>
   <button data-tab="bracket">🏆 トーナメント</button>
+  <button data-tab="ranking">📊 強さ</button>
   <button data-tab="rules">📖 ルール</button>
 </nav>
 
@@ -250,6 +265,13 @@
     <h2 class="sec"><span class="ic"></span>決勝トーナメント表</h2>
     <div class="note">グループステージが終わるまで対戦相手は未確定です。下の「<b>グループ◯ 1位</b>」「<b>◯・◯ の3位</b>」が、その枠に入るチームを表します。3位枠は、どの8グループが勝ち上がるかで自動的に決まります（FIFA規定）。</div>
     <div id="bracketList"></div>
+  </section>
+
+  <!-- 強さランキング -->
+  <section id="ranking">
+    <h2 class="sec"><span class="ic"></span>各国の強さランキング</h2>
+    <div class="note">FIFA世界ランキング（<b>2026年6月11日発表</b>）に基づく強さ順です。左の番号は出場48か国の中での順位、右が世界順位。<b style="color:var(--gold)">上位3＝金</b>・<b style="color:var(--live)">トップ8＝緑</b>・🔴日本。FIFAランキングは大会前の最終更新で、次回は7月20日です。</div>
+    <div id="rankingList"></div>
   </section>
 
   <!-- ルール -->
@@ -295,6 +317,17 @@ const GROUPS={
  J:["アルゼンチン","アルジェリア","オーストリア","ヨルダン"],
  K:["ポルトガル","コンゴ民主共和国","ウズベキスタン","コロンビア"],
  L:["イングランド","クロアチア","ガーナ","パナマ"]
+};
+// FIFA世界ランキング（2026-06-11 発表）: 国名 → 世界順位。出場48か国すべてを収録。
+const FIFARANK={
+ "アルゼンチン":1,"スペイン":2,"フランス":3,"イングランド":4,"ポルトガル":5,"ブラジル":6,
+ "モロッコ":7,"オランダ":8,"ベルギー":9,"ドイツ":10,"クロアチア":11,"コロンビア":13,
+ "メキシコ":14,"セネガル":15,"ウルグアイ":16,"アメリカ":17,"日本":18,"スイス":19,
+ "イラン":20,"トルコ":22,"エクアドル":23,"オーストリア":24,"韓国":25,"オーストラリア":27,
+ "アルジェリア":28,"エジプト":29,"カナダ":30,"ノルウェー":31,"コートジボワール":33,"パナマ":34,
+ "スウェーデン":38,"チェコ":40,"パラグアイ":41,"スコットランド":42,"チュニジア":45,"コンゴ民主共和国":46,
+ "ウズベキスタン":50,"カタール":56,"イラク":57,"南アフリカ":60,"サウジアラビア":61,"ヨルダン":63,
+ "ボスニア・ヘルツェゴビナ":64,"カーボベルデ":67,"ガーナ":73,"キュラソー":82,"ハイチ":83,"ニュージーランド":85
 };
 // グループ戦: [date,time,group,home,away,city,stadium]  (試合番号=index+1)
 const GS=[
@@ -595,6 +628,23 @@ function renderBracket(){
   document.getElementById("bracketList").innerHTML=html;
 }
 
+function groupOf(t){for(const k in GROUPS)if(GROUPS[k].includes(t))return k;return"";}
+function renderRanking(){
+  const teams=Object.keys(FIFARANK).sort((a,b)=>FIFARANK[a]-FIFARANK[b]);
+  let html="";
+  teams.forEach((t,i)=>{
+    const tier=i<3?" top3":(i<8?" top8":"");
+    const jp=t==="日本"?" jp":"";
+    html+=`<li class="rk-row${tier}${jp}">
+      <span class="rk-pos">${i+1}</span>
+      <span class="fl">${FLAGS[t]||"⚽"}</span>
+      <span class="rk-name">${t}</span>
+      <span class="rk-grp">${groupOf(t)}組</span>
+      <span class="rk-fifa">世界${FIFARANK[t]}位</span>
+    </li>`;
+  });
+  document.getElementById("rankingList").innerHTML=`<ol class="ranking">${html}</ol>`;
+}
 function renderRules(){
   let html="";
   RULES.forEach((r,i)=>{
@@ -650,6 +700,7 @@ buildTeamFilter();
 renderSchedule("");
 renderGroups();
 renderBracket();
+renderRanking();
 renderRules();
 renderNextBanner();
 </script>
