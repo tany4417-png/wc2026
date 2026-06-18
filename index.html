@@ -97,7 +97,7 @@
   /* 試合カード */
   .match{background:var(--card);border:1px solid var(--line);border-radius:12px;
     box-shadow:var(--shadow);padding:11px 13px;margin-top:9px;display:flex;gap:12px;align-items:center}
-  .match.past{opacity:.5}
+  .match.past{opacity:.62}
   .match.next{border-color:var(--accent);box-shadow:0 0 0 2px rgba(228,87,46,.18),var(--shadow)}
   .m-time{flex:0 0 52px;text-align:center}
   .m-time b{display:block;font-size:17px;font-weight:800;line-height:1.1}
@@ -114,6 +114,14 @@
   .pill.jp{background:#fde7ea;color:var(--jp)}
   .team.jp{color:var(--jp)}
   .slot{color:#42514a}
+  /* スコア表示（終了した試合） */
+  .m-teams .score{font-weight:800;font-size:16.5px;white-space:nowrap;letter-spacing:.3px;align-self:center}
+  .m-teams .score b{font-weight:800}
+  .m-teams .score i{font-style:normal;color:var(--muted);margin:0 3px;font-weight:600}
+  .m-teams .score .sw{color:var(--ink)}     /* 勝者スコア（濃） */
+  .m-teams .score .sl{color:var(--muted)}   /* 敗者スコア（淡） */
+  .team.win{font-weight:800;color:var(--ink)}
+  .team.lose:not(.jp){color:var(--muted);font-weight:600}
 
   /* グループ */
   .grid{display:grid;grid-template-columns:repeat(2,1fr);gap:11px}
@@ -238,7 +246,7 @@
 
 <footer class="wrap">
   <div>時刻は<b>日本時間（JST）</b>。日程・会場は2026年6月時点の公開情報を基にしています。<br>
-  試合のスコア・結果はこのページでは更新していません。最新の結果は各スポーツメディアでご確認ください。</div>
+  終了した試合は最終スコアを表示しています（<b>2026年6月18日 時点・第1節24試合</b>）。以降の結果は順次反映します。</div>
   <div class="share">
     <button class="btn" id="shareBtn">🔗 このページを共有</button>
   </div>
@@ -348,6 +356,13 @@ const GS=[
  ["2026-06-28","08:30","K","コロンビア","ポルトガル","マイアミ","ハードロック・スタジアム"],
  ["2026-06-28","08:30","K","コンゴ民主共和国","ウズベキスタン","アトランタ","メルセデス・ベンツ・スタジアム"]
 ];
+// 確定スコア: グループ戦の試合番号 → [ホーム得点, アウェイ得点]。試合が終わるたびにここへ追記する。
+// （2026-06-18 時点：第1節 全24試合 #1〜#24 を反映）
+const SCORES={
+ 1:[2,0],  2:[2,1],  3:[1,1],  4:[4,1],  5:[1,1],  6:[1,1],  7:[0,1],  8:[2,0],
+ 9:[7,1], 10:[2,2], 11:[1,0], 12:[5,1], 13:[0,0], 14:[1,1], 15:[1,1], 16:[2,2],
+ 17:[3,1],18:[1,4], 19:[3,0], 20:[3,1], 21:[1,1], 22:[4,2], 23:[1,0], 24:[1,3]
+};
 // ノックアウト: {n,date,time,round,home,away,city,stadium,into}
 const KO=[
  {n:73,date:"2026-06-29",time:"04:00",round:"R32",home:"グループA 2位",away:"グループB 2位",city:"ロサンゼルス",stadium:"SoFiスタジアム",into:90},
@@ -411,7 +426,7 @@ const TODAY_JST=(()=>{const o=new Date(NOW+9*3600*1000);return `${o.getUTCFullYe
 
 /* 全試合を統一フォーマットに */
 const ALL=[];
-GS.forEach((r,i)=>ALL.push({n:i+1,date:r[0],time:r[1],group:r[2],home:r[3],away:r[4],city:r[5],stadium:r[6],ko:false,ts:jstStamp(r[0],r[1])}));
+GS.forEach((r,i)=>ALL.push({n:i+1,date:r[0],time:r[1],group:r[2],home:r[3],away:r[4],city:r[5],stadium:r[6],ko:false,score:SCORES[i+1]||null,ts:jstStamp(r[0],r[1])}));
 KO.forEach(k=>ALL.push({...k,group:null,ko:true,ts:jstStamp(k.date,k.time)}));
 ALL.sort((a,b)=>a.ts-b.ts);
 
@@ -419,12 +434,19 @@ ALL.sort((a,b)=>a.ts-b.ts);
 const nextMatch=ALL.find(m=>m.ts>NOW);
 
 /* ===== 描画 ===== */
-function teamSpan(name){
+function teamSpan(name,res){
   const fl=FLAGS[name]?`<span class="fl">${FLAGS[name]}</span>`:"";
   const jp=name==="日本"?" jp":"";
-  return `${fl}<span class="team${jp}">${name}</span>`;
+  const rc=res?` ${res}`:"";
+  return `${fl}<span class="team${jp}${rc}">${name}</span>`;
 }
 function slotSpan(txt){return `<span class="slot">${txt}</span>`;}
+// スコア表示（勝者の数字を濃く・敗者を淡く）
+function scoreHtml(hs,as){
+  const hc=hs>as?"sw":(hs<as?"sl":"");
+  const ac=as>hs?"sw":(as<hs?"sl":"");
+  return `<b class="${hc}">${hs}</b><i>-</i><b class="${ac}">${as}</b>`;
+}
 
 function renderSchedule(filter){
   const list=document.getElementById("scheduleList");
@@ -458,7 +480,14 @@ function renderSchedule(filter){
     }else{
       const jpg=(m.home==="日本"||m.away==="日本")?" jp":"";
       badge=`<span class="pill${jpg}">グループ${m.group}</span>`;
-      teams=`${teamSpan(m.home)} <span class="vs">vs</span> ${teamSpan(m.away)}`;
+      if(m.score){
+        const [hs,as]=m.score;
+        const hr=hs>as?"win":(hs<as?"lose":"");
+        const ar=as>hs?"win":(as<hs?"lose":"");
+        teams=`${teamSpan(m.home,hr)} <span class="score">${scoreHtml(hs,as)}</span> ${teamSpan(m.away,ar)}`;
+      }else{
+        teams=`${teamSpan(m.home)} <span class="vs">vs</span> ${teamSpan(m.away)}`;
+      }
     }
     const timeCol=past
       ? `<b>${m.time}</b><span class="past-tag">終了</span>`
