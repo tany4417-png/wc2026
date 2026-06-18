@@ -134,6 +134,21 @@
   .gcard li:last-child{border-bottom:none}
   .gcard li .fl{font-size:18px}
   .gcard li.jp{color:var(--jp);font-weight:700}
+  /* 勝ち点・順位表 */
+  .gcard ul.standings{padding:4px 10px 8px}
+  .gcard ul.standings li{display:flex;align-items:center;gap:6px;padding:6px 2px 6px 6px;font-size:13.5px;
+    border-bottom:1px dashed var(--line);border-left:3px solid transparent}
+  .gcard ul.standings li:last-child{border-bottom:none}
+  .standings .rank{flex:0 0 15px;text-align:center;font-weight:800;color:var(--muted);font-size:12px}
+  .standings .fl{font-size:17px;flex:0 0 auto}
+  .standings .tname{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .standings .rec{font-size:10.5px;color:var(--muted);white-space:nowrap}
+  .standings .pts{font-weight:800;font-size:15px;min-width:34px;text-align:right}
+  .standings .pts small{font-size:9.5px;font-weight:600;color:var(--muted);margin-left:1px}
+  .standings li.q1{border-left-color:var(--live)}     /* 1・2位（突破圏） */
+  .standings li.q3{border-left-color:var(--accent2)}  /* 3位（条件付き突破） */
+  .standings li.q1 .rank{color:var(--live)}
+  .standings li.jp .tname{color:var(--jp)}
 
   /* トーナメント */
   .roundblock{margin-bottom:22px}
@@ -226,7 +241,7 @@
   <!-- グループ -->
   <section id="groups">
     <h2 class="sec"><span class="ic"></span>グループ分け（A〜L）</h2>
-    <div class="note">各グループ4チームで総当たり。<b>1位・2位が突破</b>、さらに3位の上位8チームも勝ち上がります（計32チーム）。🔴は日本。</div>
+    <div class="note">各グループ4チームで総当たり。<b>1位・2位が突破</b>、さらに3位の上位8チームも勝ち上がります（計32チーム）。表示は<b>現在の勝ち点順</b>（2026年6月18日 時点／勝ち点→得失点差→総得点）。<b style="color:var(--live)">緑＝突破圏(1・2位)</b>・<b style="color:var(--accent2)">黄＝3位</b>。🔴は日本。</div>
     <div class="grid" id="groupGrid"></div>
   </section>
 
@@ -504,14 +519,49 @@ function renderSchedule(filter){
   list.innerHTML=html;
 }
 
+// グループ順位を集計（勝ち点→得失点差→総得点。同点なら抽選前の暫定として組内表記順）
+function computeStandings(){
+  const st={};
+  for(const k in GROUPS){
+    st[k]={};
+    GROUPS[k].forEach(t=>st[k][t]={team:t,P:0,W:0,D:0,L:0,GF:0,GA:0,Pts:0});
+  }
+  GS.forEach((r,i)=>{
+    const sc=SCORES[i+1];if(!sc)return;
+    const g=r[2],home=r[3],away=r[4],hs=sc[0],as=sc[1];
+    const H=st[g][home],A=st[g][away];
+    H.P++;A.P++;H.GF+=hs;H.GA+=as;A.GF+=as;A.GA+=hs;
+    if(hs>as){H.W++;A.L++;H.Pts+=3;}
+    else if(hs<as){A.W++;H.L++;A.Pts+=3;}
+    else{H.D++;A.D++;H.Pts++;A.Pts++;}
+  });
+  const out={};
+  for(const k in st){
+    out[k]=Object.values(st[k]).sort((a,b)=>
+      b.Pts-a.Pts || (b.GF-b.GA)-(a.GF-a.GA) || b.GF-a.GF || GROUPS[k].indexOf(a.team)-GROUPS[k].indexOf(b.team));
+  }
+  return out;
+}
 function renderGroups(){
   const g=document.getElementById("groupGrid");
+  const ST=computeStandings();
   let html="";
   for(const k in GROUPS){
-    html+=`<div class="gcard"><h3>グループ ${k} <span>4チーム</span></h3><ul>`;
-    GROUPS[k].forEach(t=>{
-      const jp=t==="日本"?" jp":"";
-      html+=`<li class="${jp.trim()}"><span class="fl">${FLAGS[t]||"⚽"}</span>${t}</li>`;
+    const rows=ST[k];
+    const played=rows.some(r=>r.P>0);
+    html+=`<div class="gcard"><h3>グループ ${k} <span>${played?"勝点順":"4チーム"}</span></h3><ul class="standings">`;
+    rows.forEach((r,idx)=>{
+      const jp=r.team==="日本"?" jp":"";
+      const qual=played?(idx<2?" q1":(idx===2?" q3":"")):"";
+      const gd=r.GF-r.GA, gds=gd>0?`+${gd}`:`${gd}`;
+      const rec=r.P>0?`<span class="rec">${r.P}試 ${r.W}勝${r.D}分${r.L}敗 ${gds}</span>`:`<span class="rec">未消化</span>`;
+      html+=`<li class="${(jp+qual).trim()}">
+        <span class="rank">${r.P>0?idx+1:"–"}</span>
+        <span class="fl">${FLAGS[r.team]||"⚽"}</span>
+        <span class="tname">${r.team}</span>
+        ${rec}
+        <span class="pts">${r.P>0?r.Pts:"–"}<small>pt</small></span>
+      </li>`;
     });
     html+="</ul></div>";
   }
