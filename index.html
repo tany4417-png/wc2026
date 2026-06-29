@@ -177,6 +177,8 @@
   .kocard .kteams .ks{flex:1}
   .kocard .kteams .ks.r{text-align:right}
   .kocard .kteams .kvs{color:var(--muted);font-size:11px}
+  .kocard .kteams .fl{font-size:16px;margin-right:3px}
+  .seed{font-size:9.5px;color:var(--muted);font-weight:700;background:#eef3ef;padding:1px 6px;border-radius:999px;margin-left:5px;white-space:nowrap}
   .kocard .kinto{font-size:11px;color:var(--muted);margin-top:6px;border-top:1px dashed var(--line);padding-top:6px}
   .kocard .kvenue{font-size:11px;color:var(--muted);margin-top:3px}
   .kocard.final{border-color:var(--gold);box-shadow:0 0 0 2px rgba(201,162,39,.25),var(--shadow);
@@ -256,14 +258,14 @@
   <!-- グループ -->
   <section id="groups">
     <h2 class="sec"><span class="ic"></span>グループ分け（A〜L）</h2>
-    <div class="note">各グループ4チームで総当たり。<b>1位・2位が突破</b>、さらに3位の上位8チームも勝ち上がります（計32チーム）。表示は<b>現在の勝ち点順</b>（2026年6月18日 時点／勝ち点→得失点差→総得点）。<b style="color:var(--live)">緑＝突破圏(1・2位)</b>・<b style="color:var(--accent2)">黄＝3位</b>。🔴は日本。</div>
+    <div class="note">各グループ4チームで総当たり。<b>1位・2位が突破</b>、さらに3位の上位8チームも勝ち上がります（計32チーム）。グループステージは終了し、表示は<b>最終順位</b>（勝ち点→得失点差→総得点）です。<b style="color:var(--live)">緑＝突破(1・2位)</b>・<b style="color:var(--accent2)">黄＝3位</b>（3位は8チームのみ突破）。🔴は日本。</div>
     <div class="grid" id="groupGrid"></div>
   </section>
 
   <!-- トーナメント -->
   <section id="bracket">
     <h2 class="sec"><span class="ic"></span>決勝トーナメント表</h2>
-    <div class="note">グループステージが終わるまで対戦相手は未確定です。下の「<b>グループ◯ 1位</b>」「<b>◯・◯ の3位</b>」が、その枠に入るチームを表します。3位枠は、どの8グループが勝ち上がるかで自動的に決まります（FIFA規定）。</div>
+    <div class="note"><b>グループステージが終了し、決勝トーナメント32チームが確定しました。</b>各カードは確定した対戦カードです。チーム名の右のタグ（例：<b>A 1位</b>）はグループステージの最終順位を示します。突破した3位は成績上位8＝<b>B・D・E・F・I・J・K・L組</b>の3位で、FIFA規定（Annex C 組み合わせ表）に従って各枠へ割り当てられました。ラウンド16以降は勝者が決まり次第うめていきます。</div>
     <div id="bracketList"></div>
   </section>
 
@@ -283,7 +285,7 @@
 
 <footer class="wrap">
   <div>時刻は<b>日本時間（JST）</b>。日程・会場は2026年6月時点の公開情報を基にしています。<br>
-  終了した試合は最終スコアを表示しています（<b>2026年6月28日 時点・第72試合まで反映</b>）。以降の結果は順次反映します。</div>
+  グループステージ全72試合の最終スコアと、確定した決勝トーナメント表を反映しています（<b>2026年6月29日 時点</b>）。ノックアウトのスコアは順次反映します。</div>
   <div class="share">
     <button class="btn" id="shareBtn">🔗 このページを共有</button>
   </div>
@@ -405,7 +407,7 @@ const GS=[
  ["2026-06-28","08:30","K","コンゴ民主共和国","ウズベキスタン","アトランタ","メルセデス・ベンツ・スタジアム"]
 ];
 // 確定スコア: グループ戦の試合番号 → [ホーム得点, アウェイ得点]。試合が終わるたびにここへ追記する。
-// （2026-06-28 時点：#1〜#72 を反映）
+// （2026-06-29 時点：全72試合 #1〜#72 反映。#59・#60 をグループD実結果に訂正＝Turkey 3-2 USA / Paraguay 0-0 Australia）
 const SCORES={
  1:[2,0],  2:[2,1],  3:[1,1],  4:[4,1],  5:[1,1],  6:[1,1],  7:[0,1],  8:[2,0],
  9:[7,1], 10:[2,2], 11:[1,0], 12:[5,1], 13:[0,0], 14:[1,1], 15:[1,1], 16:[2,2],
@@ -420,7 +422,7 @@ const SCORES={
  53:[0,3], 54:[1,0],
  55:[0,2], 56:[2,1],
  57:[1,1], 58:[1,3],
- 59:[0,3], 60:[4,2], 61:[1,4], 62:[5,0],
+ 59:[3,2], 60:[0,0], 61:[1,4], 62:[5,0],
  63:[1,1], 64:[1,5],
  65:[0,0], 66:[0,1],
  67:[0,2], 68:[2,1],
@@ -429,22 +431,22 @@ const SCORES={
 };
 // ノックアウト: {n,date,time,round,home,away,city,stadium,into}
 const KO=[
- {n:73,date:"2026-06-29",time:"04:00",round:"R32",home:"グループA 2位",away:"グループB 2位",city:"ロサンゼルス",stadium:"SoFiスタジアム",into:90},
- {n:74,date:"2026-06-30",time:"05:30",round:"R32",home:"グループE 1位",away:"A・B・C・D・F の3位",city:"ボストン",stadium:"ジレット・スタジアム",into:89},
- {n:75,date:"2026-06-30",time:"10:00",round:"R32",home:"グループF 1位",away:"グループC 2位",city:"モンテレイ",stadium:"エスタディオBBVA",into:90},
- {n:76,date:"2026-06-30",time:"02:00",round:"R32",home:"グループC 1位",away:"グループF 2位",city:"ヒューストン",stadium:"NRGスタジアム",into:91},
- {n:77,date:"2026-07-01",time:"06:00",round:"R32",home:"グループI 1位",away:"C・D・F・G・H の3位",city:"ニューヨーク/NJ",stadium:"メットライフ・スタジアム",into:89},
- {n:78,date:"2026-07-01",time:"02:00",round:"R32",home:"グループE 2位",away:"グループI 2位",city:"ダラス",stadium:"AT&Tスタジアム",into:91},
- {n:79,date:"2026-07-01",time:"10:00",round:"R32",home:"グループA 1位",away:"C・E・F・H・I の3位",city:"メキシコシティ",stadium:"エスタディオ・アステカ",into:92},
- {n:80,date:"2026-07-02",time:"01:00",round:"R32",home:"グループL 1位",away:"E・H・I・J・K の3位",city:"アトランタ",stadium:"メルセデス・ベンツ・スタジアム",into:92},
- {n:81,date:"2026-07-02",time:"09:00",round:"R32",home:"グループD 1位",away:"B・E・F・I・J の3位",city:"サンフランシスコ",stadium:"リーバイス・スタジアム",into:94},
- {n:82,date:"2026-07-02",time:"05:00",round:"R32",home:"グループG 1位",away:"A・E・H・I・J の3位",city:"シアトル",stadium:"ルーメン・フィールド",into:94},
- {n:83,date:"2026-07-03",time:"08:00",round:"R32",home:"グループK 2位",away:"グループL 2位",city:"トロント",stadium:"BMOフィールド",into:93},
- {n:84,date:"2026-07-03",time:"04:00",round:"R32",home:"グループH 1位",away:"グループJ 2位",city:"ロサンゼルス",stadium:"SoFiスタジアム",into:93},
- {n:85,date:"2026-07-03",time:"12:00",round:"R32",home:"グループB 1位",away:"E・F・G・I・J の3位",city:"バンクーバー",stadium:"BCプレイス",into:96},
- {n:86,date:"2026-07-04",time:"07:00",round:"R32",home:"グループJ 1位",away:"グループH 2位",city:"マイアミ",stadium:"ハードロック・スタジアム",into:95},
- {n:87,date:"2026-07-04",time:"10:30",round:"R32",home:"グループK 1位",away:"D・E・I・J・L の3位",city:"カンザスシティ",stadium:"アローヘッド・スタジアム",into:96},
- {n:88,date:"2026-07-04",time:"03:00",round:"R32",home:"グループD 2位",away:"グループG 2位",city:"ダラス",stadium:"AT&Tスタジアム",into:95},
+ {n:73,date:"2026-06-29",time:"04:00",round:"R32",home:"南アフリカ",hseed:"A 2位",away:"カナダ",aseed:"B 2位",city:"ロサンゼルス",stadium:"SoFiスタジアム",into:90},
+ {n:74,date:"2026-06-30",time:"05:30",round:"R32",home:"ドイツ",hseed:"E 1位",away:"パラグアイ",aseed:"D 3位",city:"ボストン",stadium:"ジレット・スタジアム",into:89},
+ {n:75,date:"2026-06-30",time:"10:00",round:"R32",home:"オランダ",hseed:"F 1位",away:"モロッコ",aseed:"C 2位",city:"モンテレイ",stadium:"エスタディオBBVA",into:90},
+ {n:76,date:"2026-06-30",time:"02:00",round:"R32",home:"ブラジル",hseed:"C 1位",away:"日本",aseed:"F 2位",city:"ヒューストン",stadium:"NRGスタジアム",into:91},
+ {n:77,date:"2026-07-01",time:"06:00",round:"R32",home:"フランス",hseed:"I 1位",away:"スウェーデン",aseed:"F 3位",city:"ニューヨーク/NJ",stadium:"メットライフ・スタジアム",into:89},
+ {n:78,date:"2026-07-01",time:"02:00",round:"R32",home:"コートジボワール",hseed:"E 2位",away:"ノルウェー",aseed:"I 2位",city:"ダラス",stadium:"AT&Tスタジアム",into:91},
+ {n:79,date:"2026-07-01",time:"10:00",round:"R32",home:"メキシコ",hseed:"A 1位",away:"エクアドル",aseed:"E 3位",city:"メキシコシティ",stadium:"エスタディオ・アステカ",into:92},
+ {n:80,date:"2026-07-02",time:"01:00",round:"R32",home:"イングランド",hseed:"L 1位",away:"コンゴ民主共和国",aseed:"K 3位",city:"アトランタ",stadium:"メルセデス・ベンツ・スタジアム",into:92},
+ {n:81,date:"2026-07-02",time:"09:00",round:"R32",home:"アメリカ",hseed:"D 1位",away:"ボスニア・ヘルツェゴビナ",aseed:"B 3位",city:"サンフランシスコ",stadium:"リーバイス・スタジアム",into:94},
+ {n:82,date:"2026-07-02",time:"05:00",round:"R32",home:"ベルギー",hseed:"G 1位",away:"セネガル",aseed:"I 3位",city:"シアトル",stadium:"ルーメン・フィールド",into:94},
+ {n:83,date:"2026-07-03",time:"08:00",round:"R32",home:"ポルトガル",hseed:"K 2位",away:"クロアチア",aseed:"L 2位",city:"トロント",stadium:"BMOフィールド",into:93},
+ {n:84,date:"2026-07-03",time:"04:00",round:"R32",home:"スペイン",hseed:"H 1位",away:"オーストリア",aseed:"J 2位",city:"ロサンゼルス",stadium:"SoFiスタジアム",into:93},
+ {n:85,date:"2026-07-03",time:"12:00",round:"R32",home:"スイス",hseed:"B 1位",away:"アルジェリア",aseed:"J 3位",city:"バンクーバー",stadium:"BCプレイス",into:96},
+ {n:86,date:"2026-07-04",time:"07:00",round:"R32",home:"アルゼンチン",hseed:"J 1位",away:"カーボベルデ",aseed:"H 2位",city:"マイアミ",stadium:"ハードロック・スタジアム",into:95},
+ {n:87,date:"2026-07-04",time:"10:30",round:"R32",home:"コロンビア",hseed:"K 1位",away:"ガーナ",aseed:"L 3位",city:"カンザスシティ",stadium:"アローヘッド・スタジアム",into:96},
+ {n:88,date:"2026-07-04",time:"03:00",round:"R32",home:"オーストラリア",hseed:"D 2位",away:"エジプト",aseed:"G 2位",city:"ダラス",stadium:"AT&Tスタジアム",into:95},
  {n:89,date:"2026-07-05",time:"06:00",round:"R16",home:"第74試合 勝者",away:"第77試合 勝者",city:"フィラデルフィア",stadium:"リンカーン・ファイナンシャル・フィールド",into:97},
  {n:90,date:"2026-07-05",time:"02:00",round:"R16",home:"第73試合 勝者",away:"第75試合 勝者",city:"ヒューストン",stadium:"NRGスタジアム",into:97},
  {n:91,date:"2026-07-06",time:"05:00",round:"R16",home:"第76試合 勝者",away:"第78試合 勝者",city:"ニューヨーク/NJ",stadium:"メットライフ・スタジアム",into:99},
@@ -505,6 +507,13 @@ function teamSpan(name,res){
   return `${fl}<span class="team${jp}${rc}">${name}</span>`;
 }
 function slotSpan(txt){return `<span class="slot">${txt}</span>`;}
+// ノックアウトの出場枠を描画。実名が確定していれば国旗＋順位タグ、未確定なら従来のスロット表記
+function koName(name,seed){
+  if(!FLAGS[name])return slotSpan(name);
+  const jp=name==="日本"?" jp":"";
+  const sd=seed?`<span class="seed">${seed}</span>`:"";
+  return `<span class="fl">${FLAGS[name]}</span><span class="team${jp}">${name}</span>${sd}`;
+}
 // スコア表示（勝者の数字を濃く・敗者を淡く）
 function scoreHtml(hs,as){
   const hc=hs>as?"sw":(hs<as?"sl":"");
@@ -540,7 +549,7 @@ function renderSchedule(filter){
     let badge,teams;
     if(m.ko){
       badge=`<span class="pill ko">${ROUND_NAMES[m.round].replace(/（.*）/,"")}</span>`;
-      teams=`${slotSpan(m.home)} <span class="vs">vs</span> ${slotSpan(m.away)}`;
+      teams=`${koName(m.home,m.hseed)} <span class="vs">vs</span> ${koName(m.away,m.aseed)}`;
     }else{
       const jpg=(m.home==="日本"||m.away==="日本")?" jp":"";
       badge=`<span class="pill${jpg}">グループ${m.group}</span>`;
@@ -634,7 +643,7 @@ function renderBracket(){
       html+=`<div class="kocard${isFinal?" final":""}">
         <div class="ktop"><span class="knum">${isFinal?"🏆 決勝":"第"+m.n+"試合"}</span>
         <span class="kwhen">${fmtDay(m.date)} ${m.time}</span></div>
-        <div class="kteams"><span class="ks">${m.home}</span><span class="kvs">vs</span><span class="ks r">${m.away}</span></div>
+        <div class="kteams"><span class="ks">${koName(m.home,m.hseed)}</span><span class="kvs">vs</span><span class="ks r">${koName(m.away,m.aseed)}</span></div>
         <div class="kvenue">📍 ${m.city}・${m.stadium}</div>
         ${intoHtml}
       </div>`;
