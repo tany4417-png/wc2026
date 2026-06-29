@@ -186,6 +186,31 @@
   .kocard.final{border-color:var(--gold);box-shadow:0 0 0 2px rgba(201,162,39,.25),var(--shadow);
     background:linear-gradient(180deg,#fffdf3,#fff)}
   .kocard.final .knum{background:var(--gold);color:#fff}
+  /* 決勝トーナメント ブラケット表（左右から中央の決勝へ収束） */
+  #bracketList .kbr{display:flex;justify-content:flex-start;align-items:stretch;overflow-x:auto;padding:8px 2px 18px;gap:14px}
+  #bracketList .kside{display:flex;align-items:stretch;gap:14px}
+  #bracketList .kcol{display:flex;flex-direction:column}
+  #bracketList .kc-box{min-width:150px;max-width:182px}
+  #bracketList .kc-j{min-width:54px}
+  #bracketList .cell{flex:1 1 0;display:flex;flex-direction:column;justify-content:center;position:relative}
+  #bracketList .kcenter{display:flex;flex-direction:column;align-items:center;justify-content:center;min-width:122px;gap:8px;padding:0 4px}
+  #bracketList .kbox{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:4px 8px;margin:4px 0;box-shadow:var(--shadow);position:relative;z-index:2}
+  #bracketList .kbt{font-size:9px;color:var(--muted);text-align:right;margin-bottom:1px}
+  #bracketList .kr{display:flex;align-items:center;gap:5px;font-size:12.5px;font-weight:700;line-height:1.45}
+  #bracketList .kr .fl{font-size:15px;flex:0 0 auto}
+  #bracketList .kr .team{min-width:0}
+  #bracketList .kr.jp .team{color:var(--jp)}
+  #bracketList .kjt{font-size:9px;color:var(--muted);text-align:center;line-height:1.25;background:#fff;border:1px solid var(--line);border-radius:6px;padding:2px 4px;position:relative;z-index:2;align-self:center}
+  #bracketList .ktrophy{font-size:30px}
+  #bracketList .kfl{font-weight:800;color:var(--gold);font-size:15px;text-align:center}
+  #bracketList .kft{font-size:11px;color:var(--muted);text-align:center}
+  #bracketList .k3rd{text-align:center;font-size:10px;color:var(--muted);border:1px solid var(--line);border-radius:8px;padding:5px 8px;margin-top:2px}
+  #bracketList .kleft .kc-box .cell::after{content:'';position:absolute;left:100%;top:50%;width:14px;height:2px;background:#a7b6ac}
+  #bracketList .kleft .kc-j .cell::before{content:'';position:absolute;left:0;top:25%;height:50%;width:2px;background:#a7b6ac}
+  #bracketList .kleft .kc-j .cell::after{content:'';position:absolute;left:0;top:50%;width:calc(100% + 14px);height:2px;background:#a7b6ac}
+  #bracketList .kright .kc-box .cell::after{content:'';position:absolute;right:100%;top:50%;width:14px;height:2px;background:#a7b6ac}
+  #bracketList .kright .kc-j .cell::before{content:'';position:absolute;right:0;top:25%;height:50%;width:2px;background:#a7b6ac}
+  #bracketList .kright .kc-j .cell::after{content:'';position:absolute;right:0;top:50%;width:calc(100% + 14px);height:2px;background:#a7b6ac}
 
   /* ルール */
   .rule{background:var(--card);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow);margin-top:11px}
@@ -262,7 +287,7 @@
   <!-- トーナメント -->
   <section id="bracket">
     <h2 class="sec"><span class="ic"></span>決勝トーナメント表</h2>
-    <div class="note"><b>グループステージが終了し、決勝トーナメント32チームが確定しました。</b>各カードは確定した対戦カードです。チーム名の右のタグ（例：<b>A 1位</b>）はグループステージの最終順位を示します。突破した3位は成績上位8＝<b>B・D・E・F・I・J・K・L組</b>の3位で、FIFA規定（Annex C 組み合わせ表）に従って各枠へ割り当てられました。ラウンド16以降は勝者が決まり次第うめていきます。</div>
+    <div class="note"><b>グループステージが終了し、決勝トーナメント32チームが確定しました。</b>下のブラケットは、左右のカードが勝ち上がって中央の決勝へ向かう組み合わせです（<b>横にスクロール</b>すると全体を見られます）。突破した3位は成績上位8＝<b>B・D・E・F・I・J・K・L組</b>の3位で、FIFA規定（Annex C 組み合わせ表）に従って各枠へ割り当てられました。ラウンド16以降は勝者が決まり次第うめていきます。</div>
     <div id="bracketList"></div>
   </section>
 
@@ -618,41 +643,24 @@ function renderGroups(){
   g.innerHTML=html;
 }
 
+// 決勝トーナメントを左右収束型のブラケット図として描画。KOの「第N試合 勝者」参照から木構造を導出
 function renderBracket(){
-  const order=["R32","R16","QF","SF","3PO","FINAL"];
-  let html="";
-  order.forEach(r=>{
-    const ms=KO.filter(k=>k.round===r).slice().sort((a,b)=>(a.date+a.time).localeCompare(b.date+b.time));
-    if(!ms.length)return;
-    const dates=[...new Set(ms.map(m=>fmtDay(m.date)))].join("・");
-    html+=`<div class="roundblock"><h3>${ROUND_NAMES[r]} <span class="rdate">${dates}</span></h3>`;
-    ms.forEach(m=>{
-      const isFinal=m.round==="FINAL";
-      let into="";
-      if(m.into==="final")into=`勝者は決勝（第104試合）へ／敗者は3位決定戦（第103試合）へ`;
-      else if(typeof m.into==="number"){
-        // 勝ち上がった先の試合で、自分以外の枠＝次の対戦相手を割り出す
-        const nx=KO.find(k=>k.n===m.into);
-        const oppRef=nx?[nx.home,nx.away].find(s=>s!==`第${m.n}試合 勝者`):null;
-        const om=oppRef&&oppRef.match(/第(\d+)試合/);
-        const op=om?KO.find(k=>k.n===Number(om[1])):null;
-        let opp="";
-        if(op&&op.round==="R32")opp=`${op.home}／${op.away} の勝者と対戦`;
-        else if(op)opp=`第${om[1]}試合の勝者と対戦`;
-        into=opp?`勝つと第${m.into}試合（${opp}）へ`:`勝者は第${m.into}試合へ`;
-      }
-      const intoHtml=into?`<div class="kinto">→ ${into}</div>`:"";
-      html+=`<div class="kocard${isFinal?" final":""}">
-        <div class="ktop"><span class="knum">${isFinal?"🏆 決勝":"第"+m.n+"試合"}</span>
-        <span class="kwhen">${fmtDay(m.date)} ${m.time}</span></div>
-        <div class="kteams"><span class="ks">${koName(m.home,m.hseed)}</span><span class="kvs">vs</span><span class="ks r">${koName(m.away,m.aseed)}</span></div>
-        <div class="kvenue">📍 ${m.city}・${m.stadium}</div>
-        ${intoHtml}
-      </div>`;
-    });
-    html+="</div>";
-  });
-  document.getElementById("bracketList").innerHTML=html;
+  const byN={};KO.forEach(k=>byN[k.n]=k);
+  // ある試合に勝ち上がってくる2つの前段試合番号（R32は葉なのでnull）
+  const feeders=n=>{const m=byN[n];if(!m||m.round==="R32")return null;return [m.home,m.away].map(s=>{const x=s.match(/第(\d+)試合/);return x?Number(x[1]):null;});};
+  // 準決勝を根として [SF],[QF...],[R16...],[R32...] の順に各ラウンドを取得
+  const columns=root=>{let lv=[root],c=[];while(lv.length){c.push(lv);let nx=[];lv.forEach(n=>{const f=feeders(n);if(f)nx.push(...f);});lv=nx;}return c;};
+  const trow=name=>{const fl=FLAGS[name]?`<span class="fl">${FLAGS[name]}</span>`:"";const jp=name==="日本"?" jp":"";return `<div class="kr${jp}">${fl}<span class="team">${name}</span></div>`;};
+  const box=n=>{const m=byN[n];return `<div class="cell"><div class="kbox"><div class="kbt">${fmtDay(m.date)} ${m.time}</div>${trow(m.home)}${trow(m.away)}</div></div>`;};
+  const join=n=>{const m=byN[n];return `<div class="cell"><div class="kjt">${fmtDay(m.date)}<br>${m.time}</div></div>`;};
+  const colHtml=(arr,isBox)=>`<div class="kcol ${isBox?"kc-box":"kc-j"}">${arr.map(isBox?box:join).join("")}</div>`;
+  const L=columns(101),R=columns(102);
+  const left=[...L].reverse();                                   // 左半分: R32→R16→QF→SF（外→中央）
+  const leftHtml=left.map((arr,i)=>colHtml(arr,i===0)).join("");
+  const rightHtml=R.map((arr,i)=>colHtml(arr,i===R.length-1)).join(""); // 右半分: SF→QF→R16→R32（中央→外）
+  const f=byN[104],t=byN[103];
+  const center=`<div class="kcenter"><div class="ktrophy">🏆</div><div><div class="kfl">決勝</div><div class="kft">${fmtDay(f.date)} ${f.time}</div></div><div class="k3rd">3位決定戦<br>${fmtDay(t.date)} ${t.time}</div></div>`;
+  document.getElementById("bracketList").innerHTML=`<div class="kbr"><div class="kside kleft">${leftHtml}</div>${center}<div class="kside kright">${rightHtml}</div></div>`;
 }
 
 function groupOf(t){for(const k in GROUPS)if(GROUPS[k].includes(t))return k;return"";}
