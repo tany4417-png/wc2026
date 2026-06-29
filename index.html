@@ -114,6 +114,8 @@
   .pill.jp{background:#fde7ea;color:var(--jp)}
   .team.jp{color:var(--jp)}
   .slot{color:#42514a}
+  /* Twemoji画像（国旗をWindowsでも表示）。高さを文字に合わせ、旗の縦横比は維持 */
+  img.emoji{height:1em;width:auto;margin:0 .12em 0 0;vertical-align:-0.12em;display:inline-block}
   /* スコア表示（終了した試合） */
   .m-teams .score{font-weight:800;font-size:16.5px;white-space:nowrap;letter-spacing:.3px;align-self:center}
   .m-teams .score b{font-weight:800}
@@ -292,6 +294,8 @@
   <div style="margin-top:14px;opacity:.7">出典: FIFA公式 / Wikipedia / ESPN / goal.com 日本版 ほか</div>
 </footer>
 
+<!-- 国旗絵文字をWindowsでも表示するため Twemoji で画像化（読み込み失敗時は従来の文字コード表示にフォールバック） -->
+<script src="https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/dist/twemoji.min.js" crossorigin="anonymous"></script>
 <script>
 /* ===== データ ===== */
 const FLAGS={
@@ -638,7 +642,17 @@ function renderBracket(){
       const isFinal=m.round==="FINAL";
       let into="";
       if(m.into==="final")into=`勝者は決勝（第104試合）へ／敗者は3位決定戦（第103試合）へ`;
-      else if(typeof m.into==="number")into=`勝者は第${m.into}試合へ`;
+      else if(typeof m.into==="number"){
+        // 勝ち上がった先の試合で、自分以外の枠＝次の対戦相手を割り出す
+        const nx=KO.find(k=>k.n===m.into);
+        const oppRef=nx?[nx.home,nx.away].find(s=>s!==`第${m.n}試合 勝者`):null;
+        const om=oppRef&&oppRef.match(/第(\d+)試合/);
+        const op=om?KO.find(k=>k.n===Number(om[1])):null;
+        let opp="";
+        if(op&&op.round==="R32")opp=`${op.home}／${op.away} の勝者と対戦`;
+        else if(op)opp=`第${om[1]}試合の勝者と対戦`;
+        into=opp?`勝つと第${m.into}試合（${opp}）へ`:`勝者は第${m.into}試合へ`;
+      }
       const intoHtml=into?`<div class="kinto">→ ${into}</div>`:"";
       html+=`<div class="kocard${isFinal?" final":""}">
         <div class="ktop"><span class="knum">${isFinal?"🏆 決勝":"第"+m.n+"試合"}</span>
@@ -698,8 +712,8 @@ function buildTeamFilter(){
   const teams=[];
   for(const k in GROUPS)GROUPS[k].forEach(t=>teams.push(t));
   teams.forEach(t=>{const o=document.createElement("option");o.value=t;o.textContent=`${FLAGS[t]||""} ${t}`;sel.appendChild(o);});
-  sel.addEventListener("change",()=>renderSchedule(sel.value));
-  document.getElementById("resetf").addEventListener("click",()=>{sel.value="";renderSchedule("");});
+  sel.addEventListener("change",()=>{renderSchedule(sel.value);flagify();});
+  document.getElementById("resetf").addEventListener("click",()=>{sel.value="";renderSchedule("");flagify();});
 }
 
 /* タブ */
@@ -720,6 +734,23 @@ document.getElementById("shareBtn").addEventListener("click",async()=>{
   else{try{await navigator.clipboard.writeText(url);alert("URLをコピーしました！\n"+url);}catch(e){prompt("このURLを共有してください",url);}}
 });
 
+/* 国旗絵文字を画像化（WindowsのChrome/Edgeで🇿🇦等が「ZA」になる問題の対策）。
+   国旗のみ変換し他の絵文字はOS標準のまま。国フィルタの<select>は対象外にして<option>を壊さない。 */
+function flagify(){
+  if(!window.twemoji)return;
+  try{
+    document.querySelectorAll("header,#nextBanner,#scheduleList,#groupGrid,#bracketList,#rankingList").forEach(function(el){
+      twemoji.parse(el,{
+        base:"https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/",ext:".svg",folder:"svg",
+        callback:function(icon,opt){
+          var isFlag=/^1f1[ef][0-9a-f]-1f1[ef][0-9a-f]$/.test(icon)||icon.indexOf("1f3f4-e00")===0;
+          return isFlag?(opt.base+"svg/"+icon+opt.ext):false;
+        }
+      });
+    });
+  }catch(e){/* 読み込み失敗時は従来の文字表示のまま */}
+}
+
 /* 初期描画 */
 buildTeamFilter();
 renderSchedule("");
@@ -728,6 +759,7 @@ renderBracket();
 renderRanking();
 renderRules();
 renderNextBanner();
+flagify();
 </script>
 </body>
 </html>
