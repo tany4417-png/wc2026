@@ -247,13 +247,8 @@
 <main class="wrap">
   <!-- 日程 -->
   <section id="schedule" class="active">
-    <h2 class="sec"><span class="ic"></span>試合日程（日本時間）</h2>
-    <div class="filterbar">
-      <label for="teamf">国で絞る</label>
-      <select id="teamf"><option value="">すべての国</option></select>
-      <button class="reset" id="resetf">解除</button>
-    </div>
-    <div class="note" id="filterNote" style="display:none"></div>
+    <h2 class="sec"><span class="ic"></span>決勝トーナメント 日程（日本時間）</h2>
+    <div class="note">グループステージは終了しました。ここから先の決勝トーナメントの試合を、実際に行われる時間順に表示しています。組み合わせ全体は「トーナメント」タブでご覧ください。</div>
     <div id="scheduleList"></div>
   </section>
 
@@ -295,7 +290,7 @@
 </footer>
 
 <!-- 国旗絵文字をWindowsでも表示するため Twemoji で画像化（読み込み失敗時は従来の文字コード表示にフォールバック） -->
-<script src="https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/dist/twemoji.min.js" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/twemoji@14.0.2/dist/twemoji.min.js" crossorigin="anonymous"></script>
 <script>
 /* ===== データ ===== */
 const FLAGS={
@@ -525,17 +520,10 @@ function scoreHtml(hs,as){
   return `<b class="${hc}">${hs}</b><i>-</i><b class="${ac}">${as}</b>`;
 }
 
-function renderSchedule(filter){
+function renderSchedule(){
   const list=document.getElementById("scheduleList");
-  let items=ALL;
-  const note=document.getElementById("filterNote");
-  if(filter){
-    items=ALL.filter(m=>!m.ko && (m.home===filter||m.away===filter));
-    note.style.display="block";
-    note.innerHTML=`<b>${FLAGS[filter]||""} ${filter}</b> のグループステージのみ表示中。決勝トーナメントは組み合わせ確定後に「トーナメント」タブでご覧ください。`;
-  }else{
-    note.style.display="none";
-  }
+  // グループステージは終了。決勝トーナメントの試合のみを実際の時間順（ALLはts昇順）で表示
+  const items=ALL.filter(m=>m.ko);
   let html="",curDate="";
   let nextMarked=false;
   items.forEach(m=>{
@@ -634,7 +622,7 @@ function renderBracket(){
   const order=["R32","R16","QF","SF","3PO","FINAL"];
   let html="";
   order.forEach(r=>{
-    const ms=KO.filter(k=>k.round===r);
+    const ms=KO.filter(k=>k.round===r).slice().sort((a,b)=>(a.date+a.time).localeCompare(b.date+b.time));
     if(!ms.length)return;
     const dates=[...new Set(ms.map(m=>fmtDay(m.date)))].join("・");
     html+=`<div class="roundblock"><h3>${ROUND_NAMES[r]} <span class="rdate">${dates}</span></h3>`;
@@ -706,15 +694,7 @@ function renderNextBanner(){
   else{document.getElementById("nbDays").textContent=Math.ceil(diffH/24);document.getElementById("nbUnit").textContent="日後";}
 }
 
-/* 国フィルタ用セレクト */
-function buildTeamFilter(){
-  const sel=document.getElementById("teamf");
-  const teams=[];
-  for(const k in GROUPS)GROUPS[k].forEach(t=>teams.push(t));
-  teams.forEach(t=>{const o=document.createElement("option");o.value=t;o.textContent=`${FLAGS[t]||""} ${t}`;sel.appendChild(o);});
-  sel.addEventListener("change",()=>{renderSchedule(sel.value);flagify();});
-  document.getElementById("resetf").addEventListener("click",()=>{sel.value="";renderSchedule("");flagify();});
-}
+/* 国フィルタはグループステージ終了に伴い廃止（日程は決勝トーナメントのみ時間順表示） */
 
 /* タブ */
 document.getElementById("tabs").addEventListener("click",e=>{
@@ -741,7 +721,7 @@ function flagify(){
   try{
     document.querySelectorAll("header,#nextBanner,#scheduleList,#groupGrid,#bracketList,#rankingList").forEach(function(el){
       twemoji.parse(el,{
-        base:"https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/",ext:".svg",folder:"svg",
+        base:"https://cdn.jsdelivr.net/gh/jdecked/twemoji@15.1.0/assets/",ext:".svg",folder:"svg",
         callback:function(icon,opt){
           var isFlag=/^1f1[ef][0-9a-f]-1f1[ef][0-9a-f]$/.test(icon)||icon.indexOf("1f3f4-e00")===0;
           return isFlag?(opt.base+"svg/"+icon+opt.ext):false;
@@ -752,8 +732,7 @@ function flagify(){
 }
 
 /* 初期描画 */
-buildTeamFilter();
-renderSchedule("");
+renderSchedule();
 renderGroups();
 renderBracket();
 renderRanking();
