@@ -211,6 +211,18 @@
   #bracketList .kright .kc-box .cell::after{content:'';position:absolute;right:100%;top:50%;width:14px;height:2px;background:#a7b6ac}
   #bracketList .kright .kc-j .cell::before{content:'';position:absolute;right:0;top:25%;height:50%;width:2px;background:#a7b6ac}
   #bracketList .kright .kc-j .cell::after{content:'';position:absolute;right:0;top:50%;width:calc(100% + 14px);height:2px;background:#a7b6ac}
+  /* 結果表示（スコア・勝者・PK・優勝） */
+  #bracketList .kr .team{flex:1;min-width:0}
+  #bracketList .kr.pend{color:var(--muted);font-weight:600}
+  #bracketList .kr.win .team{font-weight:800;color:var(--ink)}
+  #bracketList .kr.lose{opacity:.6}
+  #bracketList .kr.lose:not(.jp) .team{color:var(--muted);font-weight:600}
+  #bracketList .ksc{font-weight:800;font-size:13px;padding-left:6px;flex:0 0 auto}
+  #bracketList .kr.lose .ksc{color:var(--muted)}
+  #bracketList .kpk{font-size:9px;color:var(--accent);text-align:right;margin-top:1px;font-weight:700}
+  #bracketList .kbt .fin{color:var(--done);font-weight:700;margin-left:5px}
+  #bracketList .kcbox{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:4px 8px;box-shadow:var(--shadow);min-width:140px}
+  #bracketList .kchamp{margin-top:4px;font-size:12.5px;font-weight:800;color:var(--gold);text-align:center}
 
   /* ルール */
   .rule{background:var(--card);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow);margin-top:11px}
@@ -453,6 +465,13 @@ const SCORES={
  69:[3,3], 70:[1,3],
  71:[0,0], 72:[3,1]
 };
+// 決勝トーナメントの結果: 試合番号 → {h:ホーム得点, a:アウェイ得点, pk:[ホームPK,アウェイPK]}
+//   pk は延長(120分)も同点でPK決着した場合のみ付ける。終了した試合をここへ追記すると、
+//   ブラケットにスコア・勝者が表示され、勝者が自動で次のラウンドへ進む（勝者が決まるまで枠は「勝者待ち」）。
+//   例: 73:{h:1,a:0}  /  90:{h:1,a:1,pk:[4,2]}
+const KOSCORES={
+ 73:{h:0,a:1},   // 南アフリカ 0-1 カナダ（カナダがロスタイム弾でR16進出）
+};
 // ノックアウト: {n,date,time,round,home,away,city,stadium,into}
 const KO=[
  {n:73,date:"2026-06-29",time:"04:00",round:"R32",home:"南アフリカ",hseed:"A 2位",away:"カナダ",aseed:"B 2位",city:"ロサンゼルス",stadium:"SoFiスタジアム",into:90},
@@ -643,23 +662,28 @@ function renderGroups(){
   g.innerHTML=html;
 }
 
-// 決勝トーナメントを左右収束型のブラケット図として描画。KOの「第N試合 勝者」参照から木構造を導出
+// 決勝トーナメントを左右収束型のブラケット図として描画。KOの参照とKOSCORESから勝者を解決し、結果・進出を反映
 function renderBracket(){
   const byN={};KO.forEach(k=>byN[k.n]=k);
-  // ある試合に勝ち上がってくる2つの前段試合番号（R32は葉なのでnull）
   const feeders=n=>{const m=byN[n];if(!m||m.round==="R32")return null;return [m.home,m.away].map(s=>{const x=s.match(/第(\d+)試合/);return x?Number(x[1]):null;});};
   // 準決勝を根として [SF],[QF...],[R16...],[R32...] の順に各ラウンドを取得
   const columns=root=>{let lv=[root],c=[];while(lv.length){c.push(lv);let nx=[];lv.forEach(n=>{const f=feeders(n);if(f)nx.push(...f);});lv=nx;}return c;};
-  const trow=name=>{const fl=FLAGS[name]?`<span class="fl">${FLAGS[name]}</span>`:"";const jp=name==="日本"?" jp":"";return `<div class="kr${jp}">${fl}<span class="team">${name}</span></div>`;};
-  const box=n=>{const m=byN[n];return `<div class="cell"><div class="kbox"><div class="kbt">${fmtDay(m.date)} ${m.time}</div>${trow(m.home)}${trow(m.away)}</div></div>`;};
-  const join=n=>{const m=byN[n];return `<div class="cell"><div class="kjt">${fmtDay(m.date)}<br>${m.time}</div></div>`;};
-  const colHtml=(arr,isBox)=>`<div class="kcol ${isBox?"kc-box":"kc-j"}">${arr.map(isBox?box:join).join("")}</div>`;
+  // スロット参照を実チームに解決（「第N試合 勝者」→勝者／「準決勝◯ 敗者」→SF敗者）。未確定はnull
+  function teamsOf(n){const m=byN[n];const rs=ref=>{const x=ref.match(/第(\d+)試合/);if(x)return winnerOf(Number(x[1]));if(ref.indexOf("準決勝1")>=0)return loserOf(101);if(ref.indexOf("準決勝2")>=0)return loserOf(102);return ref;};return [rs(m.home),rs(m.away)];}
+  function result(n){const tm=teamsOf(n);const r=KOSCORES[n];const o={h:tm[0],a:tm[1],played:false};if(r){o.played=true;o.hs=r.h;o.as=r.a;o.pk=r.pk||null;o.win=(r.h>r.a)?tm[0]:(r.a>r.h)?tm[1]:(r.pk?(r.pk[0]>r.pk[1]?tm[0]:tm[1]):null);}return o;}
+  function winnerOf(n){return result(n).win||null;}
+  function loserOf(n){const o=result(n);if(!o.played||!o.win)return null;return o.win===o.h?o.a:o.h;}
+  const row=(team,o,side)=>{if(!team)return `<div class="kr pend">勝者待ち</div>`;const fl=FLAGS[team]?`<span class="fl">${FLAGS[team]}</span>`:"";const jp=team==="日本"?" jp":"";let cls="",sc="";if(o.played){cls=o.win===team?" win":" lose";sc=`<span class="ksc">${side==="h"?o.hs:o.as}</span>`;}return `<div class="kr${jp}${cls}">${fl}<span class="team">${team}</span>${sc}</div>`;};
+  const cell=n=>{const m=byN[n],o=result(n);const isBox=o.played||o.h||o.a;if(!isBox)return `<div class="cell"><div class="kjt">${fmtDay(m.date)}<br>${m.time}</div></div>`;const hdr=`${fmtDay(m.date)} ${m.time}${o.played?'<span class="fin">終了</span>':""}`;const pk=(o.played&&o.pk)?`<div class="kpk">PK ${o.pk[0]}-${o.pk[1]}</div>`:"";return `<div class="cell"><div class="kbox"><div class="kbt">${hdr}</div>${row(o.h,o,"h")}${row(o.a,o,"a")}${pk}</div></div>`;};
+  const colHtml=arr=>{const boxy=arr.some(n=>{const o=result(n);return o.played||o.h||o.a;});return `<div class="kcol ${boxy?"kc-box":"kc-j"}">${arr.map(cell).join("")}</div>`;};
   const L=columns(101),R=columns(102);
-  const left=[...L].reverse();                                   // 左半分: R32→R16→QF→SF（外→中央）
-  const leftHtml=left.map((arr,i)=>colHtml(arr,i===0)).join("");
-  const rightHtml=R.map((arr,i)=>colHtml(arr,i===R.length-1)).join(""); // 右半分: SF→QF→R16→R32（中央→外）
-  const f=byN[104],t=byN[103];
-  const center=`<div class="kcenter"><div class="ktrophy">🏆</div><div><div class="kfl">決勝</div><div class="kft">${fmtDay(f.date)} ${f.time}</div></div><div class="k3rd">3位決定戦<br>${fmtDay(t.date)} ${t.time}</div></div>`;
+  const leftHtml=[...L].reverse().map(colHtml).join("");           // 左: R32→R16→QF→SF
+  const rightHtml=R.map(colHtml).join("");                         // 右: SF→QF→R16→R32
+  const ff=byN[104],tt=byN[103],fo=result(104),to=result(103);
+  const finBox=`<div class="kcbox"><div class="kbt">${fmtDay(ff.date)} ${ff.time}${fo.played?'<span class="fin">終了</span>':""}</div>${row(fo.h,fo,"h")}${row(fo.a,fo,"a")}${(fo.played&&fo.pk)?`<div class="kpk">PK ${fo.pk[0]}-${fo.pk[1]}</div>`:""}</div>`;
+  const champ=fo.win?`<div class="kchamp">👑 優勝 ${fo.win}</div>`:"";
+  const third=`<div class="k3rd">3位決定戦 ${fmtDay(tt.date)} ${tt.time}${(to.played&&to.win)?`<br>3位 ${to.win}`:""}</div>`;
+  const center=`<div class="kcenter"><div class="ktrophy">🏆</div><div class="kfl">決勝</div>${finBox}${champ}${third}</div>`;
   document.getElementById("bracketList").innerHTML=`<div class="kbr"><div class="kside kleft">${leftHtml}</div>${center}<div class="kside kright">${rightHtml}</div></div>`;
 }
 
